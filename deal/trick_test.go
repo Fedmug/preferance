@@ -89,3 +89,32 @@ func ExampleTrick_t012() {
 	// Taker: ♤8
 	// Partial takers: [0 1 2]
 }
+
+func ExampleTrick_pop012() {
+	var trick = NewTrick()
+	trick.Append(NewCard(Hearts, Jack, false))
+	trick.Append(NewCard(Hearts, King, false))
+	trick.Append(NewCard(Spades, Eight, true))
+	fmt.Println(trick)
+	fmt.Println("Taker:", trick.TakerCard())
+	fmt.Println("Partial takers:", trick.partialTakers)
+	card := trick.Pop()
+	fmt.Println("Popped card:", card)
+	fmt.Println("Partial takers:", trick.partialTakers)
+	card = trick.Pop()
+	fmt.Println("Popped card:", card)
+	fmt.Println("Partial takers:", trick.partialTakers)
+	card = trick.Pop()
+	fmt.Println("Popped card:", card)
+	fmt.Println("Partial takers:", trick.partialTakers)
+	// Output:
+	// ♥J ♥K ♤8
+	// Taker: ♤8
+	// Partial takers: [0 1 2]
+	// Popped card: ♤8
+	// Partial takers: [0 1]
+	// Popped card: ♥K
+	// Partial takers: [0]
+	// Popped card: ♥J
+	// Partial takers: []
+}

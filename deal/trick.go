@@ -35,6 +35,16 @@ func (t *Trick) Append(card Card) {
 	t.partialTakers = append(t.partialTakers, nextTaker)
 }
 
+func (t *Trick) Pop() Card {
+	if t.Len() == 0 {
+		panic("Trick must not be empty")
+	}
+	result := t.cards[t.Len()-1]
+	t.partialTakers = t.partialTakers[:len(t.partialTakers)-1]
+	t.cards = t.cards[:t.Len()-1]
+	return result
+}
+
 func (t *Trick) String() string {
 	result := ""
 	for _, card := range t.cards {
