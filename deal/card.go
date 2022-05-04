@@ -8,7 +8,25 @@ const (
 
 var SuitSymbols = [NumberOfSuits]rune{'\u2660', '\u2663', '\u2666', '\u2665'}
 var TrumpSuitSymbols = [NumberOfSuits]rune{'\u2664', '\u2667', '\u2662', '\u2661'}
-var RankSumbols = [SuitLength]rune{'7', '8', '9', 'T', 'J', 'Q', 'K', 'A'}
+var RankSymbols = [SuitLength]rune{'7', '8', '9', 'T', 'J', 'Q', 'K', 'A'}
+
+var SuitSymbolsMap = map[rune]Suit{
+	'\u2660': Spades,
+	'\u2663': Clubs,
+	'\u2666': Diamonds,
+	'\u2665': Hearts,
+}
+
+var RankSymbolsMap = map[rune]Suit{
+	'7': 0,
+	'8': 1,
+	'9': 2,
+	'T': 3,
+	'J': 4,
+	'Q': 5,
+	'K': 6,
+	'A': 7,
+}
 
 type Suit int8
 type Rank int8
@@ -67,7 +85,7 @@ func (c Card) Beats(other Card) bool {
 
 func (c Card) String() string {
 	if c.trump {
-		return string(TrumpSuitSymbols[c.Suit()]) + string(RankSumbols[c.Rank()])
+		return string(TrumpSuitSymbols[c.Suit()]) + string(RankSymbols[c.Rank()])
 	}
-	return string(SuitSymbols[c.Suit()]) + string(RankSumbols[c.Rank()])
+	return string(SuitSymbols[c.Suit()]) + string(RankSymbols[c.Rank()])
 }
