@@ -57,7 +57,7 @@ const (
 	FirstHand HandIndex = iota
 	SecondHand
 	ThirdHand
-	ForthHand
+	FourthHand
 	InvalidHand = -1
 )
 
