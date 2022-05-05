@@ -2,53 +2,55 @@ package deal
 
 import "strings"
 
+type TrickMove struct {
+	card  Card
+	taker HandIndex
+}
+
 type Trick struct {
-	cards         []Card
-	partialTakers []HandIndex
+	moves      []TrickMove
+	firstMover HandIndex
 }
 
-func (t *Trick) Len() int {
-	return len(t.cards)
-}
-
-func (t *Trick) TakerCard() Card {
-	if len(t.partialTakers) == 0 {
-		return Card{-1, false}
+func (t *Trick) TakerMove() TrickMove {
+	if len(t.moves) == 0 {
+		return TrickMove{Card{-1, false}, InvalidHand}
 	}
-	return t.cards[t.partialTakers[len(t.partialTakers)-1]]
+	return t.moves[len(t.moves)-1]
 }
 
-func NewTrick() *Trick {
-	cards := make([]Card, 0, NumberOfHands)
-	partialTakers := make([]HandIndex, 0, NumberOfHands)
-	return &Trick{cards, partialTakers}
+func NewTrick(firstMover HandIndex, cap int) *Trick {
+	return &Trick{make([]TrickMove, 0, cap), firstMover}
 }
 
 func (t *Trick) Append(card Card) {
-	t.cards = append(t.cards, card)
 	var nextTaker HandIndex
-	if t.Len() == 1 || card.Beats(t.TakerCard()) {
-		nextTaker = HandIndex(t.Len() - 1)
+	if len(t.moves) == 0 {
+		nextTaker = t.firstMover
 	} else {
-		nextTaker = t.partialTakers[len(t.partialTakers)-1]
+		highestCardIndex := (t.moves[len(t.moves)-1].taker + NumberOfHands - t.firstMover) % NumberOfHands
+		if card.Beats(t.moves[highestCardIndex].card) {
+			nextTaker = (t.firstMover + HandIndex(len(t.moves))) % NumberOfHands
+		} else {
+			nextTaker = t.moves[len(t.moves)-1].taker
+		}
 	}
-	t.partialTakers = append(t.partialTakers, nextTaker)
+	t.moves = append(t.moves, TrickMove{card, nextTaker})
 }
 
 func (t *Trick) Pop() Card {
-	if t.Len() == 0 {
+	if len(t.moves) == 0 {
 		panic("Trick must not be empty")
 	}
-	result := t.cards[t.Len()-1]
-	t.partialTakers = t.partialTakers[:len(t.partialTakers)-1]
-	t.cards = t.cards[:t.Len()-1]
+	result := t.moves[len(t.moves)-1].card
+	t.moves = t.moves[:len(t.moves)-1]
 	return result
 }
 
 func (t *Trick) String() string {
 	result := ""
-	for _, card := range t.cards {
-		result += card.String() + " "
+	for _, move := range t.moves {
+		result += move.card.String() + " "
 	}
 	return strings.TrimSpace(result)
 }
