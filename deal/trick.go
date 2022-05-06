@@ -2,49 +2,58 @@ package deal
 
 import "strings"
 
+type trickIndex int8
+
+const invalidTrickIndex trickIndex = -1
+
 type TrickMove struct {
-	card  Card
-	taker HandIndex
+	card                Card
+	prevBeatenCardIndex trickIndex
 }
 
 type Trick struct {
-	moves      []TrickMove
-	firstMover HandIndex
+	moves            []TrickMove
+	highestCardIndex trickIndex
+	// firstMover HandIndex
 }
 
-func (t *Trick) TakerMove() TrickMove {
-	if len(t.moves) == 0 {
-		return TrickMove{Card{-1, false}, InvalidHand}
+func NewTrick(cap int) *Trick {
+	return &Trick{make([]TrickMove, 0, cap), invalidTrickIndex}
+}
+
+func (t *Trick) takerCard() Card {
+	if t.highestCardIndex == invalidTrickIndex {
+		return Card{InvalidCardCode, false}
 	}
-	return t.moves[len(t.moves)-1]
+	return t.moves[t.highestCardIndex].card
 }
 
-func NewTrick(firstMover HandIndex, cap int) *Trick {
-	return &Trick{make([]TrickMove, 0, cap), firstMover}
-}
-
-func (t *Trick) Append(card Card) {
-	var nextTaker HandIndex
-	if len(t.moves) == 0 {
-		nextTaker = t.firstMover
-	} else {
-		highestCardIndex := (t.moves[len(t.moves)-1].taker + NumberOfHands - t.firstMover) % NumberOfHands
-		if card.Beats(t.moves[highestCardIndex].card) {
-			nextTaker = (t.firstMover + HandIndex(len(t.moves))) % NumberOfHands
-		} else {
-			nextTaker = t.moves[len(t.moves)-1].taker
-		}
+func (t *Trick) takerHandIndex(firstMover HandIndex) HandIndex {
+	if t.highestCardIndex == invalidTrickIndex {
+		return InvalidHand
 	}
-	t.moves = append(t.moves, TrickMove{card, nextTaker})
+	return (firstMover + HandIndex(t.highestCardIndex)) % NumberOfHands
 }
 
-func (t *Trick) Pop() Card {
+func (t *Trick) append(card Card) {
+	newMove := TrickMove{card, invalidTrickIndex}
+	if card.Beats(t.takerCard()) {
+		newMove.prevBeatenCardIndex = t.highestCardIndex
+		t.highestCardIndex = trickIndex(len(t.moves))
+	}
+	t.moves = append(t.moves, newMove)
+}
+
+func (t *Trick) pop() Card {
 	if len(t.moves) == 0 {
 		panic("Trick must not be empty")
 	}
-	result := t.moves[len(t.moves)-1].card
+	lastMove := t.moves[len(t.moves)-1]
+	if len(t.moves) == 1 || lastMove.prevBeatenCardIndex != invalidTrickIndex {
+		t.highestCardIndex = lastMove.prevBeatenCardIndex
+	}
 	t.moves = t.moves[:len(t.moves)-1]
-	return result
+	return lastMove.card
 }
 
 func (t *Trick) String() string {
