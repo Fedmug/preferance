@@ -31,6 +31,7 @@ var RankSymbolsMap = map[rune]Suit{
 type Suit int8
 type Rank int8
 type HandIndex int8
+type CardCode int8
 
 const (
 	Spades Suit = iota
@@ -61,14 +62,16 @@ const (
 	InvalidHand = -1
 )
 
+const InvalidCardCode CardCode = -1
+
 // code = Rank + SuitLength * Suit
 type Card struct {
-	code  int8
+	code  CardCode
 	trump bool
 }
 
 func NewCard(suit Suit, rank Rank, trump bool) Card {
-	return Card{int8(rank) + SuitLength*int8(suit), trump}
+	return Card{CardCode(rank) + SuitLength*CardCode(suit), trump}
 }
 
 func (c Card) Suit() Suit {
@@ -80,10 +83,17 @@ func (c Card) Rank() Rank {
 }
 
 func (c Card) Beats(other Card) bool {
-	return (c.trump && !other.trump) || (c.Suit() == other.Suit()) && (c.Rank() > other.Rank())
+	if c.code == InvalidCardCode {
+		return false
+	}
+	return (other.code == InvalidCardCode) || (c.trump && !other.trump) ||
+		(c.Suit() == other.Suit()) && (c.Rank() > other.Rank())
 }
 
 func (c Card) String() string {
+	if c.Suit() == InvalidSuit || c.Rank() == InvalidRank {
+		return ""
+	}
 	if c.trump {
 		return string(TrumpSuitSymbols[c.Suit()]) + string(RankSymbols[c.Rank()])
 	}
