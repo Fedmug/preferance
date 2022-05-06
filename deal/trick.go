@@ -14,11 +14,11 @@ type TrickMove struct {
 type Trick struct {
 	moves            []TrickMove
 	highestCardIndex trickIndex
-	// firstMover HandIndex
+	firstMover       HandIndex
 }
 
-func NewTrick(cap int) *Trick {
-	return &Trick{make([]TrickMove, 0, cap), invalidTrickIndex}
+func NewTrick(firstMover HandIndex, cap int) *Trick {
+	return &Trick{make([]TrickMove, 0, cap), invalidTrickIndex, firstMover}
 }
 
 func (t *Trick) takerCard() Card {
@@ -28,11 +28,11 @@ func (t *Trick) takerCard() Card {
 	return t.moves[t.highestCardIndex].card
 }
 
-func (t *Trick) takerHandIndex(firstMover HandIndex) HandIndex {
+func (t *Trick) takerHandIndex() HandIndex {
 	if t.highestCardIndex == invalidTrickIndex {
 		return InvalidHand
 	}
-	return (firstMover + HandIndex(t.highestCardIndex)) % NumberOfHands
+	return (t.firstMover + HandIndex(t.highestCardIndex)) % NumberOfHands
 }
 
 func (t *Trick) append(card Card) {
