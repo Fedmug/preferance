@@ -11,7 +11,6 @@ import (
 
 type SuitHandCode uint8
 type DealMatrix [NumberOfSuits][NumberOfHands]SuitHandCode
-type DealResult [NumberOfHands]int8
 type DensePolicy int8
 
 const (
@@ -22,13 +21,6 @@ const (
 )
 
 const NullDelimiter rune = '\u0000'
-
-// type Deal struct {
-// 	tricks []Trick
-// 	matrix DealMatrix
-// 	result DealResult
-// 	trump  Suit
-// }
 
 // Parses string with hand cards, e.g. ♠KQJ9♣J♦Q♥AJ107 (delimiter is null)
 // or A.KJT.87.QJ97 (delimiter = '.')
@@ -95,6 +87,14 @@ func (dm *DealMatrix) ContingencyTable() [NumberOfSuits][NumberOfHands]int8 {
 		for j := range dm[i] {
 			result[i][j] += int8(bits.OnesCount8(uint8(dm[i][j])))
 		}
+	}
+	return result
+}
+
+func (dm *DealMatrix) DeckSize() int8 {
+	var result int8
+	for _, suitSize := range dm.SuitSizes() {
+		result += suitSize
 	}
 	return result
 }
