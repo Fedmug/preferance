@@ -1,24 +1,44 @@
 package deal
 
 type DealResult [NumberOfHands]int8
+type DealGoals [NumberOfHands]MiniMaxType
 
 type DealPlay struct {
-	tricks []Trick
-	matrix *DealMatrix
-	result DealResult
-	trump  Suit
-	mover  HandIndex
+	tricks   []Trick
+	matrix   *DealMatrix
+	result   DealResult
+	trump    Suit
+	mover    HandIndex
+	deckSize int8
+	goals    DealGoals
 }
 
-func NewDealPlay(matrix *DealMatrix, trump Suit, firstMover HandIndex) *DealPlay {
+func NewDealPlay(matrix *DealMatrix, trump Suit, firstMover HandIndex, goals DealGoals) *DealPlay {
 	var dealResult DealResult
+	deckSize := matrix.DeckSize()
 	return &DealPlay{
-		tricks: make([]Trick, 0, matrix.DeckSize()/NumberOfHands),
-		matrix: matrix,
-		result: dealResult,
-		trump:  trump,
-		mover:  firstMover,
+		tricks:   make([]Trick, 0, deckSize/NumberOfHands),
+		matrix:   matrix,
+		result:   dealResult,
+		trump:    trump,
+		mover:    firstMover,
+		deckSize: deckSize,
+		goals:    goals,
 	}
+}
+
+func (dp *DealPlay) MoverType() MiniMaxType {
+	return dp.goals[dp.mover]
+}
+
+func (dp *DealPlay) LastMove() Card {
+	if len(dp.lastTrick().moves) > 0 {
+		return dp.lastTrick().moves[len(dp.lastTrick().moves)-1].card
+	}
+	if len(dp.tricks) > 1 {
+		return dp.tricks[len(dp.tricks)-2].moves[len(dp.tricks[len(dp.tricks)-2].moves)-1].card
+	}
+	return InvalidCard
 }
 
 func (dp *DealPlay) addNewTrick(firstMover HandIndex) {
@@ -54,13 +74,13 @@ func (dp *DealPlay) DoMove(move Card) {
 	rank := move.Rank()
 	dp.lastTrick().append(move)
 	dp.matrix[suit][dp.mover] -= 1 << rank
+	dp.deckSize--
 	if len(dp.lastTrick().moves) < NumberOfHands {
 		dp.mover = (dp.mover + 1) % NumberOfHands
 	} else {
 		dp.mover = dp.taker()
 		dp.result[dp.mover]++
 	}
-
 }
 
 func (dp *DealPlay) UndoMove() {
@@ -73,6 +93,7 @@ func (dp *DealPlay) UndoMove() {
 	move := dp.lastTrick().pop()
 	dp.mover = (dp.lastTrick().firstMover + HandIndex(len(dp.lastTrick().moves))) % NumberOfHands
 	dp.matrix[move.Suit()][dp.mover] += 1 << move.Rank()
+	dp.deckSize++
 }
 
 func (dp *DealPlay) GetMoves(policy DensePolicy) []Card {
@@ -89,7 +110,7 @@ func (dp *DealPlay) GetMoves(policy DensePolicy) []Card {
 			return dp.matrix.GetMoves(dp.trump, dp.mover, policy, true)
 		}
 	}
-	result := make([]Card, 0, dp.matrix.DeckSize()/NumberOfHands)
+	result := make([]Card, 0, dp.deckSize/NumberOfHands)
 	var i Suit
 	for i = 0; i < NumberOfSuits; i++ {
 		result = append(result, dp.matrix.GetMoves(i, dp.mover, policy, i == dp.trump)...)

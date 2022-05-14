@@ -16,7 +16,7 @@ func ExampleDealPlay() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	dp := NewDealPlay(&dealMatrix, Diamonds, ThirdHand)
+	dp := NewDealPlay(&dealMatrix, Diamonds, ThirdHand, ThirdHandContract)
 	fmt.Println(dealMatrix.String())
 	moves := dp.GetMoves(Max)
 	fmt.Println(moves)
@@ -56,7 +56,7 @@ func TestDealMatrix_from10to1(t *testing.T) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	dp := NewDealPlay(&dealMatrix, Diamonds, ThirdHand)
+	dp := NewDealPlay(&dealMatrix, Diamonds, ThirdHand, ThirdHandContract)
 	rand.Seed(time.Now().Unix())
 	require.EqualValues(t, dp.matrix.DeckSize(), 30, "Deck size must equal 30")
 	for stage := 10; stage > 0; stage-- {
@@ -92,7 +92,7 @@ func TestDealMatrix_downUp(t *testing.T) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	dp := NewDealPlay(&dealMatrix, Diamonds, ThirdHand)
+	dp := NewDealPlay(&dealMatrix, Diamonds, ThirdHand, ThirdHandContract)
 	rand.Seed(29820)
 	require.EqualValues(t, dp.matrix.DeckSize(), 30, "Deck size must equal 30")
 	var matrixHistory [10]DealMatrix
@@ -159,7 +159,7 @@ func TestDealMatrix_randDepth(t *testing.T) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	dp := NewDealPlay(&dealMatrix, Diamonds, ThirdHand)
+	dp := NewDealPlay(&dealMatrix, Diamonds, ThirdHand, ThirdHandContract)
 	rand.Seed(time.Now().Unix())
 	require.EqualValues(t, dp.matrix.DeckSize(), 30, "Deck size must equal 30")
 	const n = 1000
@@ -192,7 +192,7 @@ func TestDealMatrix_result(t *testing.T) {
 		if err != nil {
 			log.Fatal(err)
 		}
-		dp := NewDealPlay(&dealMatrix, Diamonds, ThirdHand)
+		dp := NewDealPlay(&dealMatrix, Diamonds, ThirdHand, ThirdHandContract)
 		require.EqualValues(t, dp.matrix.DeckSize(), 30, "Deck size must equal 30")
 		depth := 30
 		for j := 0; j < depth; j++ {
@@ -203,10 +203,43 @@ func TestDealMatrix_result(t *testing.T) {
 		require.EqualValues(t, dp.matrix.DeckSize(), 0, "Deck must be empty")
 		results[dp.result[ThirdHand]]++
 	}
-	var k int8
-	for k = 10; k >= 0; k-- {
-		if v, ok := results[k]; ok {
-			fmt.Println(k, v)
-		}
+	/*
+		var k int8
+		for k = 10; k >= 0; k-- {
+			if v, ok := results[k]; ok {
+				fmt.Println(k, v)
+			}
+		} */
+}
+
+func downUp(dp *DealPlay) {
+	for stage := 10; stage > 0; stage-- {
+		moves := dp.GetMoves(Max)
+		firstMove := moves[rand.Intn(len(moves))]
+		dp.DoMove(firstMove)
+		moves = dp.GetMoves(Max)
+		secondMove := moves[rand.Intn(len(moves))]
+		dp.DoMove(secondMove)
+		moves = dp.GetMoves(Max)
+		thirdMove := moves[rand.Intn(len(moves))]
+		dp.DoMove(thirdMove)
+	}
+	for stage := 1; stage < 11; stage++ {
+		dp.UndoMove()
+		dp.UndoMove()
+		dp.UndoMove()
+	}
+}
+
+func BenchmarkDealMatrix_full_depth(b *testing.B) {
+	handStrings := []string{"♠A109♣7♦QJ♥KJ87", "♠QJ♣KJ98♦9♥AQ10", "♠K8♣AQ♦AK1087♥9"}
+	dealMatrix, err := DealMatrixFromStrings(handStrings, NullDelimiter)
+	if err != nil {
+		log.Fatal(err)
+	}
+	dp := NewDealPlay(&dealMatrix, Diamonds, ThirdHand, ThirdHandContract)
+	rand.Seed(time.Now().Unix())
+	for i := 0; i < b.N; i++ {
+		downUp(dp)
 	}
 }
