@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func ExampleSqueezeSecondHandCode() {
+func Example_squeezeSecondHandCode() {
 	var firstHand, secondHand SuitHandCode = 41, 80
 	fmt.Printf("%08b (first hand)\n", firstHand)
 	fmt.Printf("%08b (second hand)\n", secondHand)
@@ -37,7 +37,7 @@ func squeezeSecondHandCodeRandom(n int) {
 	}
 }
 
-func ExampleSqueezeSecondHandCode_random() {
+func Example_squeezeSecondHandCode_random() {
 	rand.Seed(125)
 	squeezeSecondHandCodeRandom(30)
 	// Output:
@@ -62,7 +62,7 @@ func ExampleSqueezeSecondHandCode_random() {
 	// 01010000 (big)
 }
 
-func ExampleChase() {
+func Example_chase() {
 	var n, s = 4, 2
 	for i := 0; i < BinomialCoefficients[n][s]; i++ {
 		fmt.Printf("%04b %d\n", chase.sequence[n][s][i], chase.sequenceToIndex[n][s][chase.sequence[n][s][i]])
@@ -122,7 +122,7 @@ func TestChase(t *testing.T) {
 	}
 }
 
-func ExampleSuitToIndex() {
+func Example_suitToIndex() {
 	handSizes := [NumberOfHands]int8{2, 1, 0}
 	fmt.Println(suitToIndex(handSizes, [NumberOfHands]SuitHandCode{0x3, 0x4, 0}, little),
 		suitToIndex(handSizes, [NumberOfHands]SuitHandCode{0x5, 0x2, 0}, little),

@@ -18,17 +18,41 @@ const (
 
 var BinomialCoefficients [byteLen + 1][byteLen + 1]int
 
-// Given first and second hand codes, retrieve squeezed second hand code, e. g.
+type SuitHandCodeSqueezer struct {
+	endian         Endian
+	squeezeTable   [byteCap][byteCap]SuitHandCode
+	unsqueezeTable [byteCap][byteCap]SuitHandCode
+}
+
+var squeezerLittle SuitHandCodeSqueezer
+var squeezerBig SuitHandCodeSqueezer
+
+func (sq *SuitHandCodeSqueezer) initTables(endian Endian) {
+	sq.endian = endian
+	for first := 0; first < byteCap; first++ {
+		for second := 0; second < byteCap; second++ {
+			if first&second == 0 {
+				squeezedCode := squeezeSecondHandCode(SuitHandCode(first), SuitHandCode(second), endian)
+				sq.squeezeTable[first][second] = squeezedCode
+				sq.unsqueezeTable[first][squeezedCode] = SuitHandCode(second)
+			}
+		}
+	}
+}
+
+// Given mask and code, retrieve squeezed code, e. g.
 // 00110100, 01000010 -> 00001010 if endian = little
 // 00110100, 01000010 -> 01010000 if endian = big
-var handsMapLittle [byteCap][byteCap]SuitHandCode
-var handsMapBig [byteCap][byteCap]SuitHandCode
+func (sq *SuitHandCodeSqueezer) squeeze(mask, code SuitHandCode) SuitHandCode {
+	return sq.squeezeTable[mask][code]
+}
 
-// Given first and second hand codes, retrieve unsqueezed second hand code, e. g.
+// Given mask and code, retrieve unsqueezed code, e. g.
 // 00010100, 00001101 -> 00101001 if endian = little
 // 00010100, 00110100 -> 00101001 if endian = big
-var inverseHandsMapLittle [byteCap][byteCap]SuitHandCode
-var inverseHandsMapBig [byteCap][byteCap]SuitHandCode
+func (sq *SuitHandCodeSqueezer) unsqueeze(mask, code SuitHandCode) SuitHandCode {
+	return sq.unsqueezeTable[mask][code]
+}
 
 type ChaseSequences struct {
 	sequence        [byteLen + 1][byteLen + 1][]SuitHandCode
@@ -59,34 +83,22 @@ func squeezeSecondHandCode(firstHandCode, secondHandCode SuitHandCode, endian En
 	return result
 }
 
-func initMaps() {
-	for first := 0; first < byteCap; first++ {
-		for second := 0; second < byteCap; second++ {
-			if first&second == 0 {
-				squeezedCodeLittle := squeezeSecondHandCode(SuitHandCode(first), SuitHandCode(second), little)
-				handsMapLittle[first][second] = squeezedCodeLittle
-				inverseHandsMapLittle[first][squeezedCodeLittle] = SuitHandCode(second)
-
-				squeezedCodeBig := squeezeSecondHandCode(SuitHandCode(first), SuitHandCode(second), big)
-				handsMapBig[first][second] = squeezedCodeBig
-				inverseHandsMapBig[first][squeezedCodeBig] = SuitHandCode(second)
-			}
-		}
-	}
-}
-
 func squeeze(firstHandCode, secondHandCode SuitHandCode, endian Endian) SuitHandCode {
 	if endian == little {
-		return handsMapLittle[firstHandCode][secondHandCode]
+		// return squeezeSecondHandTableLittle[firstHandCode][secondHandCode]
+		return squeezerLittle.squeeze(firstHandCode, secondHandCode)
 	}
-	return handsMapBig[firstHandCode][secondHandCode]
+	// return squeezeSecondHandTableBig[firstHandCode][secondHandCode]
+	return squeezerBig.squeeze(firstHandCode, secondHandCode)
 }
 
 func unsqueeze(firstHandCode, secondHandCode SuitHandCode, endian Endian) SuitHandCode {
 	if endian == little {
-		return inverseHandsMapLittle[firstHandCode][secondHandCode]
+		// return unsqueezeSecondHandTableLittle[firstHandCode][secondHandCode]
+		return squeezerLittle.unsqueeze(firstHandCode, secondHandCode)
 	}
-	return inverseHandsMapBig[firstHandCode][secondHandCode]
+	// return unsqueezeSecondHandTableBig[firstHandCode][secondHandCode]
+	return squeezerBig.unsqueeze(firstHandCode, secondHandCode)
 }
 
 func initBinomials() {
@@ -185,7 +197,8 @@ func initChase() {
 }
 
 func init() {
-	initMaps()
+	squeezerLittle.initTables(little)
+	squeezerBig.initTables(big)
 	initBinomials()
 	initChase()
 }
