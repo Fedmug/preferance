@@ -167,6 +167,4 @@ func ExampleMultiEval() {
 	}
 	dp := NewDealPlay(&dealMatrix, Diamonds, FirstHand, ThirdHandContract)
 	MultiEval(dp, Max)
-	// Output:
-	// Node type: 0
 }

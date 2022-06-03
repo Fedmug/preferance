@@ -1,5 +1,10 @@
 package deal
 
+const (
+	trumpOffset            = 1
+	contingencyTableOffset = 21
+)
+
 type DealResult [NumberOfHands]int8
 type DealGoals [NumberOfHands]MiniMaxType
 
@@ -70,10 +75,8 @@ func (dp *DealPlay) DoMove(move Card) {
 	if len(dp.tricks) == 0 || len(dp.lastTrick().moves) == NumberOfHands {
 		dp.toNextTrick()
 	}
-	suit := move.Suit()
-	rank := move.Rank()
 	dp.lastTrick().append(move)
-	dp.matrix[suit][dp.mover] -= 1 << rank
+	dp.matrix.Remove(move, dp.mover)
 	dp.deckSize--
 	if len(dp.lastTrick().moves) < NumberOfHands {
 		dp.mover = (dp.mover + 1) % NumberOfHands
@@ -92,7 +95,7 @@ func (dp *DealPlay) UndoMove() {
 	}
 	move := dp.lastTrick().pop()
 	dp.mover = (dp.lastTrick().firstMover + HandIndex(len(dp.lastTrick().moves))) % NumberOfHands
-	dp.matrix[move.Suit()][dp.mover] += 1 << move.Rank()
+	dp.matrix.Add(move, dp.mover)
 	dp.deckSize++
 }
 
@@ -116,4 +119,32 @@ func (dp *DealPlay) GetMoves(policy DensePolicy) []Card {
 		result = append(result, dp.matrix.GetMoves(i, dp.mover, policy, i == dp.trump)...)
 	}
 	return result
+}
+
+func (dp *DealPlay) Index(endian Endian) int64 {
+	var result int64
+	if dp.trump != InvalidSuit {
+		result = 1
+	}
+	result += int64(contingencyTableMap[dp.matrix.ContingencyTable()]) << trumpOffset
+	result += dp.matrix.Index(endian) << contingencyTableOffset
+	return result
+}
+
+func NewDealPlayFromIndex(index int64, endian Endian, goals DealGoals) *DealPlay {
+	var trump Suit = InvalidSuit
+	if index%2 > 0 {
+		trump = Spades
+	}
+	table := contingencyTables[index%(1<<contingencyTableOffset)>>trumpOffset]
+	dealMatrix := DealMatrixFromIndex(table, index>>contingencyTableOffset, endian)
+	deckSize := dealMatrix.DeckSize()
+	return &DealPlay{
+		tricks:   make([]Trick, 0, deckSize/NumberOfHands),
+		matrix:   &dealMatrix,
+		trump:    trump,
+		mover:    FirstHand,
+		deckSize: deckSize,
+		goals:    goals,
+	}
 }

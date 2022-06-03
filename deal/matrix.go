@@ -9,8 +9,12 @@ import (
 	"golang.org/x/exp/constraints"
 )
 
+const FullSuit SuitHandCode = 0xFF
+
 type SuitHandCode uint8
+
 type DealMatrix [NumberOfSuits][NumberOfHands]SuitHandCode
+
 type DensePolicy int8
 
 const (
@@ -68,23 +72,98 @@ func DealMatrixFromStrings(handStrings []string, delimiter rune) (DealMatrix, er
 			matrix[j][i] = code
 		}
 	}
+	/*
+		for i := 0; i < NumberOfSuits; i++ {
+			matrix.missedCards[i] = FullSuit
+			for j := 0; j < NumberOfHands; j++ {
+				matrix.missedCards[i] -= matrix.codes[i][j]
+			}
+		}*/
+	// matrix.squeeze(InvalidSuit)
 	return matrix, nil
 }
 
+func (dm *DealMatrix) squeeze(endian Endian) DealMatrix {
+	var result DealMatrix
+	var missedCards [NumberOfSuits]SuitHandCode
+	for i := 0; i < NumberOfSuits; i++ {
+		for j := 0; j < NumberOfHands; j++ {
+			missedCards[i] += dm[i][j]
+		}
+		missedCards[i] = ^missedCards[i]
+	}
+	for i := 0; i < NumberOfSuits; i++ {
+		for j := 0; j < NumberOfHands; j++ {
+			result[i][j] = squeeze(missedCards[i], dm[i][j], endian)
+		}
+	}
+	return result
+}
+
+/*
+// converts code = x0+y to xy, y = prefix
+func squeezeZeros(code, prefixLen, zerosLen uint8) uint8 {
+	if prefixLen == 8 {
+		return code
+	}
+	prefix := code % (1 << prefixLen)
+	suffix := (code >> (prefixLen + zerosLen)) << prefixLen
+	return prefix + suffix
+}
+
+func (dm *DealMatrix) squeeze() {
+	for i := 0; i < NumberOfSuits; i++ {
+		for j := 0; j < NumberOfHands; j++ {
+			dm.missedCards[i] |= ^dm.codes[i][j]
+			dm.squeezedCodes[i][j] = dm.codes[i][j]
+		}
+		directCodeSums := ^dm.missedCards[i]
+		invertedCodeSums := dm.missedCards[i]
+		var zerosLen, prefixLen uint8
+		for directCodeSums > 0 {
+			if directCodeSums&1 == 0 {
+				zerosLen = uint8(bits.TrailingZeros8(uint8(directCodeSums)))
+				for j := 0; j < NumberOfHands; j++ {
+					dm.squeezedCodes[i][j] =
+						SuitHandCode(squeezeZeros(uint8(dm.squeezedCodes[i][j]), prefixLen, zerosLen))
+				}
+				directCodeSums >>= zerosLen
+				invertedCodeSums >>= zerosLen
+			} else {
+				onesLen := uint8(bits.TrailingZeros8(uint8(invertedCodeSums)))
+				directCodeSums >>= onesLen
+				invertedCodeSums >>= onesLen
+				prefixLen += onesLen
+			}
+		}
+	}
+}
+*/
+
 func (dm *DealMatrix) SuitSizes() [NumberOfSuits]int8 {
 	var result [NumberOfSuits]int8
-	for i := range *dm {
-		for j := range dm[i] {
+	for i := 0; i < NumberOfSuits; i++ {
+		for j := 0; j < NumberOfHands; j++ {
 			result[i] += int8(bits.OnesCount8(uint8(dm[i][j])))
 		}
 	}
 	return result
 }
 
-func (dm *DealMatrix) ContingencyTable() [NumberOfSuits][NumberOfHands]int8 {
-	var result [NumberOfSuits][NumberOfHands]int8
-	for i := range *dm {
-		for j := range dm[i] {
+func (dm *DealMatrix) HandSizes() [NumberOfHands]int8 {
+	var result [NumberOfHands]int8
+	for i := 0; i < NumberOfHands; i++ {
+		for j := 0; j < NumberOfSuits; j++ {
+			result[i] += int8(bits.OnesCount8(uint8(dm[j][i])))
+		}
+	}
+	return result
+}
+
+func (dm *DealMatrix) ContingencyTable() ContingencyTable {
+	var result ContingencyTable
+	for i := 0; i < NumberOfSuits; i++ {
+		for j := 0; j < NumberOfHands; j++ {
 			result[i][j] += int8(bits.OnesCount8(uint8(dm[i][j])))
 		}
 	}
@@ -125,6 +204,18 @@ func (dm *DealMatrix) String() string {
 	return result.String()
 }
 
+func (dm *DealMatrix) Add(card Card, hand HandIndex) {
+	suit := card.Suit()
+	rank := card.Rank()
+	dm[suit][hand] += 1 << rank
+}
+
+func (dm *DealMatrix) Remove(card Card, hand HandIndex) {
+	suit := card.Suit()
+	rank := card.Rank()
+	dm[suit][hand] -= 1 << rank
+}
+
 func (dm *DealMatrix) GetMoves(suit Suit, hand HandIndex, policy DensePolicy, isTrump bool) []Card {
 	directCode := uint8(dm[suit][hand])
 	invertedCode := ^directCode
@@ -158,4 +249,27 @@ func (dm *DealMatrix) GetMoves(suit Suit, hand HandIndex, policy DensePolicy, is
 		invertedCode >>= shift
 	}
 	return moves
+}
+
+func (dm *DealMatrix) Index(endian Endian) int64 {
+	var result int64
+	var coef int64 = 1
+	squeezedMatrix := dm.squeeze(endian)
+	contingencyTable := squeezedMatrix.ContingencyTable()
+	for i := 0; i < NumberOfSuits; i++ {
+		suitIndex := int64(suitToIndex(contingencyTable[i], squeezedMatrix[i], endian))
+		result += suitIndex * coef
+		coef *= int64(multinomial(contingencyTable[i]))
+	}
+	return result
+}
+
+func DealMatrixFromIndex(table ContingencyTable, index int64, endian Endian) DealMatrix {
+	var result DealMatrix
+	for i := 0; i < NumberOfSuits; i++ {
+		coef := int64(multinomial(table[i]))
+		result[i] = indexToSuitCodes(table[i], int(index%coef), endian)
+		index /= coef
+	}
+	return result
 }

@@ -154,6 +154,7 @@ func TestSuitIndex(t *testing.T) {
 							fmt.Sprintf("hand size %v does not match code %v", handSizes[i], suitCodes[i]))
 					}
 					indexFromCodes := suitToIndex(handSizes, suitCodes, little)
+					require.GreaterOrEqual(t, indexFromCodes, 0, fmt.Sprintf("index %d is negative", indexFromCodes))
 					require.EqualValues(t, index, indexFromCodes,
 						fmt.Sprintf("handSizes = %v, suitCodes = %v", handSizes, suitCodes))
 				}
@@ -176,7 +177,7 @@ func BenchmarkIndexToSuitCodes(b *testing.B) {
 func BenchmarkSuitToIndex(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		handSizes := [NumberOfHands]int8{3, 1, 3}
-		handCodes := [NumberOfHands]SuitHandCode{0x46, 0x80, 0x19}
+		handCodes := [NumberOfHands]SuitHandCode{0x26, 0x40, 0x19}
 		suitToIndex(handSizes, handCodes, little)
 	}
 }

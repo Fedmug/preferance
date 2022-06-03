@@ -11,43 +11,74 @@ import (
 )
 
 func ExampleDealPlay() {
-	handStrings := []string{"♠A109♣7♦QJ♥KJ87", "♠QJ♣KJ98♦9♥AQ10", "♠K8♣AQ♦AK1087♥9"}
+	handStrings := []string{"♠A109", "♠QJ♣J", "♠K8♣Q"}
 	dealMatrix, err := DealMatrixFromStrings(handStrings, NullDelimiter)
 	if err != nil {
 		log.Fatal(err)
 	}
 	dp := NewDealPlay(&dealMatrix, Diamonds, ThirdHand, ThirdHandContract)
-	fmt.Println(dealMatrix.String())
+
 	moves := dp.GetMoves(Max)
 	fmt.Println(moves)
 	dp.DoMove(moves[0])
-	fmt.Printf("%s\n", dp.tricks[0].String())
-	fmt.Println(dealMatrix.String())
 
 	moves = dp.GetMoves(Max)
 	fmt.Println(moves)
 	dp.DoMove(moves[0])
-	fmt.Printf("%s\n", dp.tricks[0].String())
-	fmt.Println(dealMatrix.String())
 
 	moves = dp.GetMoves(Max)
 	fmt.Println(moves)
 	dp.DoMove(moves[0])
-	fmt.Printf("%s\n", dp.tricks[0].String())
-	fmt.Println(dealMatrix.String())
 
-	moves = dp.GetMoves(Max)
-	fmt.Println(moves)
-	dp.DoMove(moves[0])
-	fmt.Printf("%s\n", dp.tricks[len(dp.tricks)-1].String())
-	// fmt.Println(dealMatrix.String())
+	fmt.Printf("Trick: %s\n", dp.tricks[len(dp.tricks)-1].String())
+	fmt.Println("Deal:")
+	fmt.Println(dealMatrix.String())
+	fmt.Println("Squeezed deal:")
+	squeezedDeal := dealMatrix.squeeze(little)
+	fmt.Println(squeezedDeal.String())
 	// Output:
-	// ♥J
-	// Taker card&hand: ♥J 2
-	// ♥J ♥9
-	// Taker card&hand: ♥9 2
-	// ♥J ♥9 ♥Q
-	// Taker card&hand: ♥Q 1
+	// [♠8 ♠K ♣Q]
+	// [♠T ♠A]
+	// [♠Q]
+	// Trick: ♠8 ♠T ♠Q
+	// Deal:
+	// ♠A9
+	// ♠J ♣J
+	// ♠K ♣Q
+	// Squeezed deal:
+	// ♠T7
+	// ♠8 ♣7
+	// ♠9 ♣8
+}
+
+func ExampleDealPlay_index() {
+	handStrings := []string{"♠A109", "♠QJ♣J", "♠K8♣Q"}
+	dealMatrix, err := DealMatrixFromStrings(handStrings, NullDelimiter)
+	if err != nil {
+		log.Fatal(err)
+	}
+	dp := NewDealPlay(&dealMatrix, Diamonds, FirstHand, ThirdHandContract)
+	fmt.Println("Index little:", dp.Index(little))
+	fmt.Println("Index big:", dp.Index(big))
+
+	dpFromIndexLittle := NewDealPlayFromIndex(dp.Index(little), little, ThirdHandContract)
+	fmt.Println("Deal play from index little:")
+	fmt.Println(dpFromIndexLittle.matrix)
+
+	dpFromIndexBig := NewDealPlayFromIndex(dp.Index(big), big, ThirdHandContract)
+	fmt.Println("Deal play from index little:")
+	fmt.Println(dpFromIndexBig.matrix)
+	// Output:
+	// Index little: 559939863
+	// Index big: 408944919
+	// Deal play from index little:
+	// ♠K98
+	// ♠JT ♣7
+	// ♠Q7 ♣8
+	// Deal play from index little:
+	// ♠AT9
+	// ♠QJ ♣K
+	// ♠K8 ♣A
 }
 
 func TestDealMatrix_from10to1(t *testing.T) {
@@ -241,5 +272,19 @@ func BenchmarkDealMatrix_full_depth(b *testing.B) {
 	rand.Seed(time.Now().Unix())
 	for i := 0; i < b.N; i++ {
 		downUp(dp)
+	}
+}
+
+func BenchmarkDoUndoMove(b *testing.B) {
+	handStrings := []string{"♠A109♣7♦QJ♥KJ87", "♠QJ♣KJ98♦9♥AQ10", "♠K8♣AQ♦AK1087♥9"}
+	dealMatrix, err := DealMatrixFromStrings(handStrings, NullDelimiter)
+	if err != nil {
+		log.Fatal(err)
+	}
+	dp := NewDealPlay(&dealMatrix, Diamonds, ThirdHand, ThirdHandContract)
+	moves := dealMatrix.GetMoves(Suit(rand.Intn(NumberOfSuits)),
+		HandIndex(rand.Intn(NumberOfHands)), Random, false)
+	for i := 0; i < b.N; i++ {
+		dp.DoMove(moves[rand.Intn(len(moves))])
 	}
 }
