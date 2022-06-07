@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func ExampleBinomialCoefficients() {
+func ExampleBinomial() {
 	fmt.Println(Binomial(5, 2))
 	fmt.Println(Binomial(20, 10))
 	// Output:
@@ -29,6 +29,7 @@ var binomCases = []testBinomCase{
 	{n: 8, k: 4, result: 70},
 	{n: 20, k: 10, result: 184756},
 	{n: 32, k: 10, result: 64512240},
+	{n: 52, k: 13, result: 635013559600},
 }
 
 func TestBinomSimple(t *testing.T) {
@@ -50,6 +51,7 @@ func TestMulinomial(t *testing.T) {
 		{ns: []uint8{2, 3}, result: 10},
 		{ns: []uint8{2, 3, 3}, result: 560},
 		{ns: []uint8{2, 2, 2, 2}, result: 2520},
+		{ns: []uint8{10, 10, 10, 2}, result: 2753294408504640},
 	} {
 		if out := Multinomial(input.ns); out != input.result {
 			t.Errorf("multinomial(%v) = %d != %d", input.ns, out, input.result)
