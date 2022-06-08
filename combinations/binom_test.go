@@ -56,6 +56,21 @@ func TestMulinomial(t *testing.T) {
 		if out := Multinomial(input.ns); out != input.result {
 			t.Errorf("multinomial(%v) = %d != %d", input.ns, out, input.result)
 		}
+		if out := MultiBinomial(input.ns); out != input.result {
+			t.Errorf("multinomial(%v) = %d != %d", input.ns, out, input.result)
+		}
+	}
+}
+
+func BenchmarkBinomial_8(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		Binomial(8, 3)
+	}
+}
+
+func BenchmarkBinomial_32(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		Binomial(32, 10)
 	}
 }
 
@@ -63,6 +78,15 @@ func BenchmarkMultinomial(b *testing.B) {
 	array := [3]uint8{3, 2, 3}
 	for i := 0; i < b.N; i++ {
 		if x := Multinomial(array[:3]); x < 1 {
+			b.Fatalf("To small: %d", x)
+		}
+	}
+}
+
+func BenchmarkMultiBinomial(b *testing.B) {
+	array := [3]uint8{3, 2, 3}
+	for i := 0; i < b.N; i++ {
+		if x := MultiBinomial(array[:3]); x < 1 {
 			b.Fatalf("To small: %d", x)
 		}
 	}

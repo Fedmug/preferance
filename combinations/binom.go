@@ -52,3 +52,14 @@ func Multinomial(ns []uint8) uint64 {
 	}
 	return result
 }
+
+// assumes that ns[i] and sum(ns) <= maxBinom
+func MultiBinomial(ns []uint8) uint64 {
+	var sum uint8 = ns[0] + ns[1]
+	var result uint64 = Binomial(sum, ns[1])
+	for i := 2; i < len(ns); i++ {
+		sum += ns[i]
+		result *= Binomial(sum, ns[i])
+	}
+	return result
+}
