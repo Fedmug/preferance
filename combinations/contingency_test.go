@@ -121,6 +121,9 @@ func ExampleTableToInt() {
 // [[1 6 0] [0 1 5] [2 0 4] [6 2 0]]
 
 func TestTableInt(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skip long table int test")
+	}
 	trump := true
 	var maxCode int
 	for nSuits := 1; nSuits <= 4; nSuits++ {
