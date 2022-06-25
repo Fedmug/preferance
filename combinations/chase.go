@@ -1,4 +1,4 @@
-package combinations
+package comb
 
 // all n-choose-k Chase sequences are stored as binary codes
 // see also Khuth, 7.2.1.3, Algorithm C
@@ -19,7 +19,7 @@ func init() {
 	}
 	for n := 0; n <= byteLen; n++ {
 		for s := 0; s <= n; s++ {
-			chase.sequence[n][s] = make([]uint8, 0, Binomial(uint8(n), uint8(s)))
+			chase.sequence[n][s] = make([]uint8, 0, Binomial(int8(n), int8(s)))
 			var code uint8
 			for i := 0; i < n-s; i++ {
 				code += 1 << (s + i)
@@ -33,7 +33,7 @@ func init() {
 			if r == 0 {
 				r = n - s
 			}
-			for i := 0; i < int(Binomial(uint8(n), uint8(s))); i++ {
+			for i := 0; i < int(Binomial(int8(n), int8(s))); i++ {
 				chase.sequence[n][s] = append(chase.sequence[n][s], code)
 				chase.sequenceToIndex[n][s][code] = i
 				j := r
