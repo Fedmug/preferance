@@ -1,4 +1,4 @@
-package combinations
+package comb
 
 import (
 	"fmt"
@@ -14,7 +14,7 @@ func ExampleBinomial() {
 }
 
 type testBinomCase struct {
-	n, k   uint8
+	n, k   int8
 	result uint64
 }
 
@@ -41,17 +41,17 @@ func TestBinomSimple(t *testing.T) {
 }
 
 type testMultinomialCase struct {
-	ns     []uint8
+	ns     []int8
 	result uint64
 }
 
 func TestMulinomial(t *testing.T) {
 	for _, input := range []testMultinomialCase{
-		{ns: []uint8{5, 0}, result: 1},
-		{ns: []uint8{2, 3}, result: 10},
-		{ns: []uint8{2, 3, 3}, result: 560},
-		{ns: []uint8{2, 2, 2, 2}, result: 2520},
-		{ns: []uint8{10, 10, 10, 2}, result: 2753294408504640},
+		{ns: []int8{5, 0}, result: 1},
+		{ns: []int8{2, 3}, result: 10},
+		{ns: []int8{2, 3, 3}, result: 560},
+		{ns: []int8{2, 2, 2, 2}, result: 2520},
+		{ns: []int8{10, 10, 10, 2}, result: 2753294408504640},
 	} {
 		if out := Multinomial(input.ns); out != input.result {
 			t.Errorf("multinomial(%v) = %d != %d", input.ns, out, input.result)
@@ -75,7 +75,7 @@ func BenchmarkBinomial_32(b *testing.B) {
 }
 
 func BenchmarkMultinomial(b *testing.B) {
-	array := [3]uint8{3, 2, 3}
+	array := [3]int8{3, 2, 3}
 	for i := 0; i < b.N; i++ {
 		if x := Multinomial(array[:3]); x < 1 {
 			b.Fatalf("To small: %d", x)
@@ -84,7 +84,7 @@ func BenchmarkMultinomial(b *testing.B) {
 }
 
 func BenchmarkMultiBinomial(b *testing.B) {
-	array := [3]uint8{3, 2, 3}
+	array := [3]int8{3, 2, 3}
 	for i := 0; i < b.N; i++ {
 		if x := MultiBinomial(array[:3]); x < 1 {
 			b.Fatalf("To small: %d", x)
