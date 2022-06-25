@@ -1,119 +1,125 @@
-package combinations
+package comb
 
-// Visits all compositions (ordered partitions) of the form number = q[1] + ... + q[s]
-// with restriction 0 <= q[j] <= bound[j]; see Knuth, Art of Programming, 7.2.1.3, problem 60
-func VisitBoundedCompositions(n int8, bound []int8, visitor func([]int8)) {
-	var sum int8
-	for _, b := range bound {
-		sum += b
+import (
+	"log"
+)
+
+const (
+	maxSuitSize   = 8
+	triplet       = 3
+	totalTriplets = 164
+)
+
+type composition []int8
+
+// Visits all compositions (ordered partitions) of integer n into s non-negative summands;
+// see Knuth, Art of Programming, 7.2.1.3, problem 3
+func VisitCompositions(n, s int8, visitor func(composition)) {
+	if s <= 0 {
+		log.Fatalf("Number of summands should be positive!")
 	}
-
-	// Q1
-	if sum < n {
-		return
-	}
-
-	s := len(bound)
 	if s == 1 {
-		visitor([]int8{n})
+		visitor(composition{n})
 		return
 	}
-
-	q := make([]int8, s)
-	x := n
+	array := make(composition, s)
+	var r int8 = -1
+	array[0] = n
 	for {
-		// Q2
-		j := 0
-		for x > bound[j] {
-			q[j] = bound[j]
-			x -= bound[j]
-			j++
-		}
-		q[j] = x
-
-		// Q3
-		for {
-			visitor(q)
-			flag := false
-
-			// Q4
-			if j == 0 {
-				x = q[0] - 1
-				j = 1
-			} else if q[0] == 0 {
-				x = q[j] - 1
-				q[j] = 0
-				j++
+		visitor(array)
+		if array[0] == 0 {
+			if r == s-1 {
+				break
 			} else {
-				flag = true
+				array[0] = array[r] - 1
+				array[r] = 0
+				r++
 			}
-
-			if !flag {
-				// Q5
-				for j < s && q[j] == bound[j] {
-					x += bound[j]
-					q[j] = 0
-					j++
-				}
-				if j >= s {
-					return
-				}
-
-				// Q6
-				q[j]++
-				if x == 0 {
-					q[0] = 0
-					continue
-				} else {
-					break
-				}
-			}
-			// Q7
-			for q[j] == bound[j] {
-				j++
-				if j >= s {
-					return
-				}
-			}
-			q[j]++
-			j--
-			q[j]--
-			if q[0] == 0 {
-				j = 1
-			}
+		} else {
+			array[0]--
+			r = 1
 		}
+		array[r]++
 	}
 }
 
-func isOrdered(comp []int8, excludeFirstElement bool) bool {
-	if excludeFirstElement && comp[0] == 0 {
-		return false
-	}
-	i := 0
-	if excludeFirstElement {
-		i = 1
-	}
-	for ; i < len(comp)-1; i++ {
-		if comp[i] > comp[i+1] {
-			return false
-		}
-	}
-	return true
-}
-
-// Given nCards of nSuits, counts all possible suit size distributions
-// if maximal suit size is not greater than maxSuitSize
-func SuitSizesCounter(nCards, nSuits, maxSuitSize int8, trump bool) int {
+func countCompositions(nMax, s int8) int {
 	result := 0
-	suitBounds := make([]int8, nSuits)
-	var i int8
-	for ; i < nSuits; i++ {
-		suitBounds[i] = maxSuitSize
+	var n int8
+	for n = 1; n <= nMax; n++ {
+		VisitCompositions(n, s, func(composition) { result++ })
 	}
-	VisitBoundedCompositions(nCards, suitBounds, func(suitSizes []int8) {
-		if isOrdered(suitSizes, trump) {
-			result++
-		}
-	})
 	return result
+}
+
+type compInt uint16
+
+const bitsPerPart = 4
+
+// stores all compositions n = q[0] + ... + q[s-1]
+// each composition is represented by int N = q[0] + q[1]*(n+1) + ... + q[s-1]*(n+1)^{s-1}
+// requirements: s <= 4, n <= 15
+type compositionIndexer struct {
+	n        int8
+	s        int8
+	list     []compInt
+	indexMap map[compInt]int
+}
+
+func compToInt(comp composition, n int8) compInt {
+	var result, shift compInt
+	for i := range comp {
+		result |= compInt(comp[i]) << shift
+		shift += bitsPerPart
+	}
+	// fmt.Printf("int(%v) = %v\n", comp, result)
+	return result
+}
+
+func intToComp(code compInt, n, s int8, comp composition) {
+	for i := 0; i < int(s); i++ {
+		comp[i] = int8(code % (1 << bitsPerPart))
+		code >>= bitsPerPart
+	}
+	// fmt.Printf("comp(%v) = %v\n", code, comp)
+}
+
+func newCompositionIndexer(n, s int8) compositionIndexer {
+	nComps := Binomial(n+s-1, s-1)
+	list := make([]compInt, nComps)
+	indexMap := make(map[compInt]int, nComps)
+	index := 0
+	VisitCompositions(n, s, func(comp composition) {
+		list[index] = compToInt(comp, n)
+		indexMap[list[index]] = index
+		index++
+	})
+	return compositionIndexer{n, s, list, indexMap}
+}
+
+func (ci compositionIndexer) getIndex(comp composition) int {
+	return ci.indexMap[compToInt(comp, ci.n)]
+}
+
+func (ci compositionIndexer) getComp(index int) composition {
+	comp := make(composition, ci.s)
+	intToComp(ci.list[index], ci.n, ci.s, comp)
+	return comp
+}
+
+func (ci compositionIndexer) writeComp(index int, comp composition) {
+	intToComp(ci.list[index], ci.n, ci.s, comp)
+}
+
+func (ci compositionIndexer) len() int {
+	return len(ci.list)
+}
+
+var compTriplets [maxSuitSize]compositionIndexer
+
+func init() {
+	var n int8
+	for n = 1; n <= maxSuitSize; n++ {
+		compTriplets[n-1] = newCompositionIndexer(n, triplet)
+	}
 }
