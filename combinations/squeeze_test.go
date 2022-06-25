@@ -1,4 +1,4 @@
-package combinations
+package comb
 
 import (
 	"fmt"
@@ -14,8 +14,8 @@ func Example_squeezeSecondHandCode() {
 	fmt.Printf("%08b (first hand)\n", firstHand)
 	fmt.Printf("%08b (second hand)\n", secondHand)
 
-	fmt.Printf("%08b (little)\n", Squeeze(firstHand, secondHand, Little))
-	fmt.Printf("%08b (big)\n", Squeeze(firstHand, secondHand, Big))
+	fmt.Printf("%08b (little)\n", squeeze(firstHand, secondHand, Little))
+	fmt.Printf("%08b (big)\n", squeeze(firstHand, secondHand, Big))
 	// Output:
 	// 00101001 (first hand)
 	// 01010000 (second hand)
@@ -31,8 +31,8 @@ func squeezeSecondHandCodeRandom(n int) {
 			fmt.Printf("%08b (first hand)\n", first)
 			fmt.Printf("%08b (second hand)\n", second)
 
-			fmt.Printf("%08b (little)\n", Squeeze(first, second, Little))
-			fmt.Printf("%08b (big)\n\n", Squeeze(first, second, Big))
+			fmt.Printf("%08b (little)\n", squeeze(first, second, Little))
+			fmt.Printf("%08b (big)\n\n", squeeze(first, second, Big))
 		}
 	}
 }
@@ -62,16 +62,34 @@ func Example_squeezeSecondHandCode_random() {
 	// 01010000 (big)
 }
 
+func Example_initRows() {
+	fmt.Println("rowsLittle:", len(rowsLittle), len(rowToIndexLittle))
+	fmt.Println("rowsBig:", len(rowsBig), len(rowToIndexBig))
+	// Output:
+	// rowsLittle: 9841 65536
+	// rowsBig: 9841 65536
+}
+
+func Example_initRowsIndex() {
+	var counters [totalRows + 1]int
+	for _, v := range rowToIndexLittle {
+		counters[v]++
+	}
+	fmt.Println(counters[:9])
+	// Output:
+	// [1 8 28 56 70 56 28 8 1]
+}
+
 func TestSecondHandMap(t *testing.T) {
 	total := 0
 	for first := 0; first < byteCap; first++ {
 		for second := 0; second < byteCap; second++ {
 			if first&second == 0 {
 				total++
-				squeezedLittle := Squeeze(uint8(first), uint8(second), Little)
-				squeezedBig := Squeeze(uint8(first), uint8(second), Big)
-				unsqueezedLittle := Unsqueeze(uint8(first), squeezedLittle, Little)
-				unsqueezedBig := Unsqueeze(uint8(first), squeezedBig, Big)
+				squeezedLittle := squeeze(uint8(first), uint8(second), Little)
+				squeezedBig := squeeze(uint8(first), uint8(second), Big)
+				unsqueezedLittle := unsqueeze(uint8(first), squeezedLittle, Little)
+				unsqueezedBig := unsqueeze(uint8(first), squeezedBig, Big)
 				require.EqualValues(t, bits.OnesCount8(uint8(second)), bits.OnesCount8(uint8(squeezedLittle)))
 				require.EqualValues(t, bits.OnesCount8(uint8(second)), bits.OnesCount8(uint8(squeezedBig)))
 				require.EqualValues(t, second, unsqueezedLittle)
@@ -84,13 +102,26 @@ func TestSecondHandMap(t *testing.T) {
 	require.EqualValues(t, 6561, total)
 }
 
+func TestRowIndex(t *testing.T) {
+	for i := 0; i < len(rowsLittle); i++ {
+		require.EqualValues(t, i, rowToIndexLittle[rowsLittle[i]],
+			fmt.Sprintf("little index is wrong: got %d, want %d", rowToIndexLittle[rowsLittle[i]], i))
+		require.EqualValues(t, i, rowToIndexBig[rowsBig[i]],
+			fmt.Sprintf("big index is wrong: got %d, want %d", rowToIndexBig[rowsBig[i]], i))
+		require.LessOrEqual(t, bits.OnesCount32(rowsLittle[i]), 8,
+			fmt.Sprintf("popcount in %x is too big: %d", rowsLittle[i], bits.OnesCount32(rowsLittle[i])))
+		require.LessOrEqual(t, bits.OnesCount32(rowsBig[i]), 8,
+			fmt.Sprintf("popcount in %x is too big: %d", rowsBig[i], bits.OnesCount32(rowsBig[i])))
+	}
+}
+
 func BenchmarkSqueezer(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		for first := 0; first < byteCap; first++ {
 			for second := 0; second < byteCap; second++ {
 				if first&second == 0 {
-					code := Squeeze(uint8(first), uint8(second), Little)
-					Unsqueeze(uint8(first), code, Little)
+					code := squeeze(uint8(first), uint8(second), Little)
+					unsqueeze(uint8(first), code, Little)
 				}
 			}
 		}
